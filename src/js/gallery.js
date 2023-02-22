@@ -4,8 +4,7 @@ import Notiflix from 'notiflix';
 
 const DEBOUNCE_DELAY = 300;
 import { fetchPictures } from './fetchPictures.js';
-
-let lightbox = null;
+import { createGalleryCardsMarkup } from './buildGallery.js';
 
 const pageData = {
   pageCounter: 1,
@@ -15,6 +14,10 @@ const pageData = {
 const formSubmit = document.querySelector('.search-form');
 const buttonLoadMore = document.querySelector('.load-more');
 const galeryInsertionPoint = document.querySelector('.gallery');
+
+const lightbox = new SimpleLightbox('.gallery .gallery__item ', {
+  captionDelay: 250,
+});
 
 buttonLoadMore.addEventListener('click', () =>
   loadMoreElements(pageData.searchQuery, pageData.pageCounter)
@@ -40,7 +43,6 @@ function inputHandler(obj, pageCounter) {
       clearGallery();
       galleryBuilder(trimmedInput, pageCounter);
       pageData.pageCounter++;
-      showButton();
     } else {
       galleryBuilder(trimmedInput, pageCounter);
       pageData.pageCounter++;
@@ -66,9 +68,11 @@ async function galleryBuilder(trimmedInput, pageCounter) {
       // hardcored to 40 pictures in request
       hideButton();
       displayError(
-        `We're sorry, but you've reached the end of search results.`
+        `We're sorry, but you've reached the end of search results.`,
+        'info'
       );
     }
+    showButton();
     const response = await createGalleryCardsMarkup(resultArray);
     const displayresult = await galeryInsertionPoint.insertAdjacentHTML(
       'beforeend',
@@ -78,8 +82,7 @@ async function galleryBuilder(trimmedInput, pageCounter) {
   } catch (error) {
     error => displayError(error);
   } finally {
-    lightbox = null;
-    lightbox = new SimpleLightbox('.gallery .gallery__item');
+    lightbox.refresh();
   }
 }
 
@@ -95,53 +98,22 @@ function showButton() {
   buttonLoadMore.style.display = 'block';
 }
 
-function createGalleryCardsMarkup(el) {
-  return el
-    .map(
-      ({
-        webformatURL,
-        largeImageURL,
-        tags,
-        likes,
-        views,
-        comments,
-        downloads,
-      }) => {
-        return `
-      <div class="gallery__item" href="${largeImageURL}" onclick = "event.preventDefault()">
-      <img class="gallery__image" src="${webformatURL}" alt="${tags}" />
-      <div class="info">
-    <p class="info-item">
-      <b>Likes</b>
-      <b class="image-data">${likes}</b>
-    </p>
-    <p class="info-item">
-      <b>Views</b>
-      <b class="image-data">${views}</b>
-    </p>
-    <p class="info-item">
-      <b>Comments</b>
-      <b class="image-data">${comments}</b>
-    </p>
-    <p class="info-item">
-      <b>Downloads</b>
-      <b class="image-data">${downloads}</b>
-    </p>
-  </div>
-    </div>
-      `;
-      }
-    )
-    .join('');
-}
-
-async function displayError(error) {
+async function displayError(error, type) {
   switch (typeof error) {
     case 'object':
-      Notiflix.Notify.failure(error.message);
+      if (type === 'info') {
+        Notiflix.Notify.info(error.message);
+      } else {
+        Notiflix.Notify.failure(error.message);
+      }
+
       break;
     case 'string':
-      Notiflix.Notify.failure(error);
+      if (type === 'info') {
+        Notiflix.Notify.info(error);
+      } else {
+        Notiflix.Notify.failure(error);
+      }
       break;
     default:
       console.log('error');
